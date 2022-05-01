@@ -97,6 +97,6 @@ for json_filename in list_of_share_filenames:
 assert threshold <= len(y_shares), 'Not enough shares for secret reconstruction' 
 reconstructed_secret = shamir.secret_reconstruction(x_id, y_shares, primitive_poly)
 seed_phrase = word_coding.decode_words(word_list, format(reconstructed_secret, 'b').zfill(dict_bits*num_words))
-print(seed_phrase)
+print(' '.join(seed_phrase))
 with open('secret_reconstructed.txt', 'w') as file:
 	file.write(' '.join(seed_phrase))

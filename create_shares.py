@@ -158,7 +158,7 @@ for i in range (len(shares)):
             'id': i+1,
             'share' : reconstructed_shared_secrets
             }
-    print(share_data)
+    print('share ' + str(i+1) + ': ' + ' '.join(reconstructed_shared_secrets))
 
     # Add public reconstruction data to each share if --verbose was used.
     if verbose:
