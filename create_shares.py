@@ -16,7 +16,7 @@ Requisites
 This package comes pre-loaded with BIP-39's 2048-word dictionary.
 
 2) The secret phrase to be shared should:
-    * Have between 3 and 60 words.
+    * Have between 12 and 60 words.
     * Have only words that are contained in the dictionary "wordlist.txt".
     * Be written in a single line, with each word separated by only a space.
 
@@ -43,7 +43,7 @@ The following flags are optional:
 
 Outputs
 -------
-During execution, the /shares folder is emptied, and its contents are replaced with the following 
+During execution, the /shares folder is emptied, and its contents are replaced with the following
 JSON files:
 
 * reconstruction_data.json: Contains the following entries:
@@ -122,20 +122,24 @@ if file_path != None:
             secret = file.read()
     except FileNotFoundError:
         raise RuntimeError("No secret.txt file provided in the script's folder, or file not found at the custom specified location.")
-# Case 2: if no file path was assigned above, then -s is the secret phrase! 
+# Case 2: if no file path was assigned above, then -s is the secret phrase!
 
 
-# Secret should have between 3 and 60 words, and all words in the secret should be in the dictionary.
+# Secret should have between 12 and 60 words, and all words in the secret should be in the dictionary.
 secret = secret.strip().split(' ')
 nw = len(secret)
-assert nw in range(3,61), "Secret has " + str(nw) + " words, but it must have between 3 and 60 words"
+assert nw in range(12,61), "Secret has " + str(nw) + " words, but it must have between 12 and 60 words"
 assert set(secret).issubset(set(word_list)), "Not every word in the secret is contained in the dictionary"
 
+num_checksum_bits = nw * 11 % 32
+num_entropy_bits = nw * 11 - num_checksum_bits
+
+assert n <= 2 ** num_checksum_bits, "For a secret seed with " + str(nw) + " words, a maximum of " + str(2 ** num_checksum_bits) + " shares can be generated"
 
 # Convert secret to numerical form with word_coding.py, so that shares can be generated with shamir.py
-binary_secret = word_coding.encode_words(word_list, secret)
+binary_secret = word_coding.encode_words(word_list, secret)[:-num_checksum_bits]
 decimal_secret = int(binary_secret,2)
-primitive_poly = get_primitive_poly(nb*nw)
+primitive_poly = get_primitive_poly(nb*nw - num_checksum_bits)
 shares = shamir.share_generation(decimal_secret, n, t, primitive_poly)
 
 
@@ -152,10 +156,10 @@ with open('shares/reconstruction_data.json', 'w') as file:
 
 # For each share, output a JSON file including id and secret share (word-encoded).
 for i in range (len(shares)):
-    reconstructed_shared_secrets = word_coding.decode_words(word_list, format(shares[i], "b").zfill(nb*nw))
+    share_with_checksum = int(format(shares[i], 'b').zfill(num_entropy_bits) + format(i+1, 'b').zfill(num_checksum_bits), 2)
+    reconstructed_shared_secrets = word_coding.decode_words(word_list, format(share_with_checksum, "b").zfill(nb*nw))
     file_name = "shares/share_" + str(i+1) + ".json"
     share_data = {
-            'id': i+1,
             'share' : reconstructed_shared_secrets
             }
     print(share_data)
